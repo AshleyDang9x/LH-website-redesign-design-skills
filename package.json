@@ -1,0 +1,38 @@
+{
+  "name": "typeui.sh",
+  "version": "0.1.0",
+  "description": "Paid CLI to generate design-system skill files for AI coding providers",
+  "main": "dist/cli.js",
+  "bin": {
+    "typeui.sh": "dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/themesberg/typeui.sh.cli.git"
+  },
+  "keywords": [],
+  "author": "typeui.sh",
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/themesberg/typeui.sh.cli/issues"
+  },
+  "homepage": "https://github.com/themesberg/typeui.sh.cli#readme",
+  "dependencies": {
+    "commander": "^14.0.3",
+    "inquirer": "^13.3.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

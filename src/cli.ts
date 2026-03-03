@@ -1,0 +1,106 @@
+#!/usr/bin/env node
+import path from "node:path";
+import { Command } from "commander";
+import { ensureVerifiedAccess, getCachedLicenseSummary, verifyAndCacheLicenseFromPrompt } from "./licensing/licenseService";
+import { promptDesignSystem, promptProviders } from "./prompts/designSystem";
+import { runGeneration } from "./generation/runGeneration";
+import { Provider, SUPPORTED_PROVIDERS } from "./types";
+
+function parseProviderOption(raw?: string): Provider[] | null {
+  if (!raw) {
+    return null;
+  }
+  const values = raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (values.length === 0) {
+    return null;
+  }
+
+  const invalid = values.filter((provider) => !SUPPORTED_PROVIDERS.includes(provider as Provider));
+  if (invalid.length > 0) {
+    throw new Error(
+      `Unsupported providers: ${invalid.join(", ")}. Supported: ${SUPPORTED_PROVIDERS.join(", ")}.`
+    );
+  }
+
+  return values as Provider[];
+}
+
+function printResults(mode: "generated" | "updated" | "preview", results: Array<{ filePath: string; changed: boolean }>) {
+  console.log("");
+  for (const result of results) {
+    const state = result.changed ? mode : "unchanged";
+    console.log(`${state}: ${path.relative(process.cwd(), result.filePath) || result.filePath}`);
+  }
+}
+
+async function generateLike(mode: "generated" | "updated" | "preview", options: { providers?: string; dryRun?: boolean }) {
+  await ensureVerifiedAccess();
+  const providers = parseProviderOption(options.providers) ?? (await promptProviders());
+  const designSystem = await promptDesignSystem("typeui.sh");
+  const results = await runGeneration({
+    projectRoot: process.cwd(),
+    providers,
+    designSystem,
+    dryRun: Boolean(options.dryRun)
+  });
+  printResults(mode, results);
+}
+
+const program = new Command();
+
+program
+  .name("typeui.sh")
+  .description("Generate and update design-system skill markdown files for AI providers.")
+  .version("0.1.0");
+
+program
+  .command("verify")
+  .description("Verify your Polar purchase and cache the local license token.")
+  .action(async () => {
+    const record = await verifyAndCacheLicenseFromPrompt();
+    console.log(`License cached for ${record.email} until ${record.expiresAt}`);
+  });
+
+program
+  .command("license")
+  .description("Show local cached license status.")
+  .action(async () => {
+    console.log(await getCachedLicenseSummary());
+  });
+
+program
+  .command("init")
+  .description("Verify license and generate provider skill files in the current project.")
+  .option("-p, --providers <providers>", "Comma-separated providers")
+  .option("--dry-run", "Preview file changes without writing")
+  .action(async (options) => {
+    await generateLike(options.dryRun ? "preview" : "generated", options);
+  });
+
+program
+  .command("generate")
+  .description("Generate provider skill files in the current project.")
+  .option("-p, --providers <providers>", "Comma-separated providers")
+  .option("--dry-run", "Preview file changes without writing")
+  .action(async (options) => {
+    await generateLike(options.dryRun ? "preview" : "generated", options);
+  });
+
+program
+  .command("update")
+  .description("Update existing provider skill files in the current project.")
+  .option("-p, --providers <providers>", "Comma-separated providers")
+  .option("--dry-run", "Preview file changes without writing")
+  .action(async (options) => {
+    await generateLike(options.dryRun ? "preview" : "updated", options);
+  });
+
+program.parseAsync().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`typeui.sh error: ${message}`);
+  process.exitCode = 1;
+});
