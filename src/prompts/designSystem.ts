@@ -192,6 +192,18 @@ const TYPOGRAPHY_SCALE_OPTIONS = [
   "desktop-first expressive scale"
 ];
 
+const FONT_WEIGHT_OPTIONS = [
+  "100",
+  "200",
+  "300",
+  "400",
+  "500",
+  "600",
+  "700",
+  "800",
+  "900"
+];
+
 const GOOGLE_FONT_SANS_OPTIONS = [
   "Inter",
   "Roboto",
@@ -396,19 +408,18 @@ async function promptTypographyGuidance(current?: string): Promise<string> {
     choices: GOOGLE_FONT_MONO_OPTIONS,
     defaultValue: parseMetaField(parsed.meta, "mono") ?? "JetBrains Mono"
   });
-  const typographyDetails = await inquirer.prompt<{ fontWeights: string }>([
-    {
-      type: "input",
-      name: "fontWeights",
-      message: "Core font weights (comma-separated):",
-      default: parseMetaField(parsed.meta, "weights") ?? "400, 500, 600, 700"
-    }
-  ]);
+  const fontWeightDefaults = matchPresetDefaults(parseMetaField(parsed.meta, "weights") ?? "", FONT_WEIGHT_OPTIONS);
+  const fontWeights = await promptPresetSelection({
+    message: "Select core font weights:",
+    presets: FONT_WEIGHT_OPTIONS,
+    defaultSelected: FONT_WEIGHT_OPTIONS,
+    defaultCustom: fontWeightDefaults.custom
+  });
 
   return (
     `${scaleValues.join(", ")} | Fonts: primary=${primaryFont}, ` +
     `display=${secondaryFont}, mono=${monoFont} | ` +
-    `weights=${typographyDetails.fontWeights}`
+    `weights=${fontWeights.join(", ")}`
   );
 }
 
