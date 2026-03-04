@@ -16,7 +16,7 @@ import {
 } from "./prompts/designSystem";
 import { loadExistingDesignSystem } from "./generation/existingDesignSystem";
 import { runGeneration } from "./generation/runGeneration";
-import { DesignSystemInput, Provider, SUPPORTED_PROVIDERS } from "./types";
+import { ALWAYS_INCLUDED_PROVIDERS, DesignSystemInput, Provider, SUPPORTED_PROVIDERS } from "./types";
 import { printBanner } from "./ui/banner";
 
 function parseProviderOption(raw?: string): Provider[] | null {
@@ -52,7 +52,8 @@ function printResults(mode: "generated" | "updated" | "preview", results: Array<
 
 async function generateLike(mode: "generated" | "updated" | "preview", options: { providers?: string; dryRun?: boolean }) {
   await ensureVerifiedAccess();
-  const providers = parseProviderOption(options.providers) ?? (await promptProviders());
+  const selectedProviders = parseProviderOption(options.providers) ?? (await promptProviders());
+  const providers = [...new Set<Provider>([...ALWAYS_INCLUDED_PROVIDERS, ...selectedProviders])];
   let designSystem: DesignSystemInput;
 
   if (mode === "updated") {

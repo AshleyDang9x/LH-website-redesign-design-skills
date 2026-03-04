@@ -4,17 +4,29 @@ import {
   ProviderSelectionSchema
 } from "../domain/designSystemSchema";
 import {
+  ALWAYS_INCLUDED_PROVIDERS,
   DesignSystemField,
   DesignSystemInput,
+  OPTIONAL_PROVIDERS,
+  PROVIDER_DETAILS,
   Provider,
   SUPPORTED_PROVIDERS
 } from "../types";
 
-const providerChoices: { name: string; value: Provider }[] = [
-  { name: "Codex", value: "codex" },
-  { name: "Cursor", value: "cursor" },
-  { name: "Claude Code", value: "claude-code" },
-  { name: "Open Code", value: "open-code" }
+const providerChoices: { name: string; value: Provider }[] = OPTIONAL_PROVIDERS.map((provider) => ({
+  name: `${PROVIDER_DETAILS[provider].title} (${PROVIDER_DETAILS[provider].relativePath.replace("/design-system/SKILL.md", "/")})`,
+  value: provider
+}));
+
+const UNIVERSAL_DEFAULT_AGENT_LIST = [
+  "Amp",
+  "Cline",
+  "Codex",
+  "Cursor",
+  "Gemini CLI",
+  "GitHub Copilot",
+  "Kimi Code CLI",
+  "OpenCode"
 ];
 
 const designFieldChoices: { name: string; value: DesignSystemField }[] = [
@@ -523,17 +535,23 @@ async function promptColorPaletteGuidance(current?: string): Promise<string> {
 }
 
 export async function promptProviders(): Promise<Provider[]> {
+  console.log("");
+  console.log("── Universal target: .agents/skills (included automatically) ──");
+  for (const agent of UNIVERSAL_DEFAULT_AGENT_LIST) {
+    console.log(`   • ${agent}`);
+  }
+  console.log("");
+
   const answers = await inquirer.prompt<{ providers: Provider[] }>([
     {
       type: "checkbox",
       name: "providers",
-      message: "Select provider files to generate/update:",
-      choices: providerChoices,
-      validate: (value: unknown[]) => value.length > 0 || "Select at least one provider."
+      message: "Select additional provider files to generate/update (optional):",
+      choices: providerChoices
     }
   ]);
 
-  return ProviderSelectionSchema.parse(answers.providers);
+  return ProviderSelectionSchema.parse([...ALWAYS_INCLUDED_PROVIDERS, ...answers.providers]);
 }
 
 export async function promptDesignSystem(defaultProductName = "typeui.sh"): Promise<DesignSystemInput> {

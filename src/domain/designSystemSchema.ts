@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SUPPORTED_PROVIDERS } from "../types";
+import { Provider, SUPPORTED_PROVIDERS } from "../types";
 
 const csvToList = (value: string): string[] =>
   value
@@ -12,7 +12,14 @@ const nonEmptyList = z
   .transform(csvToList)
   .pipe(z.array(z.string()).min(1, "At least one item is required."));
 
-export const ProviderSelectionSchema = z.array(z.enum(SUPPORTED_PROVIDERS)).min(1);
+export const ProviderSelectionSchema = z
+  .array(
+    z.string().refine((provider) => SUPPORTED_PROVIDERS.includes(provider as Provider), {
+      message: `Provider must be one of: ${SUPPORTED_PROVIDERS.join(", ")}.`
+    })
+  )
+  .min(1)
+  .transform((providers) => providers as Provider[]);
 
 export const DesignSystemSchema = z.object({
   productName: z.string().min(2, "Product name is too short."),

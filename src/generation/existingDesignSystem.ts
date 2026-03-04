@@ -2,14 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { MANAGED_BLOCK_END, MANAGED_BLOCK_START } from "../config";
 import { DesignSystemSchema } from "../domain/designSystemSchema";
-import { DesignSystemInput, Provider } from "../types";
-
-const providerSkillPaths: Record<Provider, string> = {
-  codex: ".codex/skills/design-system/SKILL.md",
-  cursor: ".cursor/skills/design-system/SKILL.md",
-  "claude-code": ".claude/skills/design-system/SKILL.md",
-  "open-code": ".opencode/skills/design-system/SKILL.md"
-};
+import { DesignSystemInput, PROVIDER_DETAILS, Provider } from "../types";
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -103,7 +96,7 @@ export async function loadExistingDesignSystem(
   providers: Provider[]
 ): Promise<DesignSystemInput | null> {
   for (const provider of providers) {
-    const absPath = path.resolve(projectRoot, providerSkillPaths[provider]);
+    const absPath = path.resolve(projectRoot, PROVIDER_DETAILS[provider].relativePath);
     try {
       const content = await fs.readFile(absPath, "utf8");
       const parsed = parseManagedDesignSystem(content);
