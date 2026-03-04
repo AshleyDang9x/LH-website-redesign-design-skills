@@ -1,4 +1,4 @@
-import { getPolarApiKey, getPolarVerifyUrl, PRODUCT_ID } from "../config";
+import { getPolarVerifyUrl } from "../config";
 
 export interface PolarVerifySuccess {
   ok: true;
@@ -14,32 +14,63 @@ export type PolarVerifyResult = PolarVerifySuccess | PolarVerifyFailure;
 
 interface PolarResponseShape {
   valid?: boolean;
+  reason?: string;
+  status?: string;
   expires_at?: string;
+  expiresAt?: string;
   error?: string;
 }
 
-export async function verifyPurchaseWithPolar(email: string, purchaseToken: string): Promise<PolarVerifyResult> {
-  const response = await fetch(getPolarVerifyUrl(), {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${getPolarApiKey()}`
-    },
-    body: JSON.stringify({
-      productId: PRODUCT_ID,
-      email,
-      purchaseToken
-    })
-  });
+const VERIFY_CACHE_TTL_MINUTES = 15;
+
+export async function verifyPurchaseWithPolar(licenseKey: string): Promise<PolarVerifyResult> {
+  const verifyUrl = getPolarVerifyUrl();
+  let response: Response;
+  try {
+    response = await fetch(verifyUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        licenseKey
+      })
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      ok: false,
+      reason: `Could not reach license server at ${verifyUrl}: ${message}. Check POLAR_VERIFY_URL (include http:// or https://) and ensure your server is running.`
+    };
+  }
 
   if (!response.ok) {
-    return { ok: false, reason: `Polar verification failed (${response.status}).` };
+    let serverReason: string | undefined;
+    try {
+      const errorData = (await response.json()) as PolarResponseShape;
+      serverReason = errorData.reason || errorData.error;
+    } catch {
+      // Ignore JSON parse failures and fall back to status-only message.
+    }
+    return {
+      ok: false,
+      reason: serverReason
+        ? `License verification failed (${response.status}): ${serverReason}.`
+        : `License verification failed (${response.status}).`
+    };
   }
 
   const data = (await response.json()) as PolarResponseShape;
-  if (!data.valid || !data.expires_at) {
-    return { ok: false, reason: data.error || "Purchase is not valid." };
+  if (!data.valid || data.reason !== "active" || data.status !== "granted") {
+    return { ok: false, reason: data.reason || data.error || "License key is not valid." };
   }
 
-  return { ok: true, expiresAt: data.expires_at };
+  return {
+    ok: true,
+    // Keep a short-lived local grant unless server returns explicit expiry.
+    expiresAt:
+      data.expiresAt ??
+      data.expires_at ??
+      new Date(Date.now() + VERIFY_CACHE_TTL_MINUTES * 60 * 1000).toISOString()
+  };
 }

@@ -1,7 +1,13 @@
 #!/usr/bin/env node
+import "dotenv/config";
 import path from "node:path";
 import { Command } from "commander";
-import { ensureVerifiedAccess, getCachedLicenseSummary, verifyAndCacheLicenseFromPrompt } from "./licensing/licenseService";
+import {
+  clearCachedLicenseState,
+  ensureVerifiedAccess,
+  getCachedLicenseSummary,
+  verifyAndCacheLicenseFromPrompt
+} from "./licensing/licenseService";
 import { promptDesignSystem, promptProviders } from "./prompts/designSystem";
 import { runGeneration } from "./generation/runGeneration";
 import { Provider, SUPPORTED_PROVIDERS } from "./types";
@@ -53,8 +59,9 @@ async function generateLike(mode: "generated" | "updated" | "preview", options: 
 
 const program = new Command();
 
+const hasNoArgs = process.argv.length <= 2;
 const wantsHelp = process.argv.includes("--help") || process.argv.includes("-h");
-if (wantsHelp) {
+if (hasNoArgs || wantsHelp) {
   printBanner();
 }
 
@@ -69,10 +76,10 @@ program.hook("preAction", () => {
 
 program
   .command("verify")
-  .description("Verify your Polar purchase and cache the local license token.")
+  .description("Verify your license key and cache local license status.")
   .action(async () => {
     const record = await verifyAndCacheLicenseFromPrompt();
-    console.log(`License cached for ${record.email} until ${record.expiresAt}`);
+    console.log(`License cached (${record.licenseKeyFingerprint}) until ${record.expiresAt}`);
   });
 
 program
@@ -107,6 +114,14 @@ program
   .option("--dry-run", "Preview file changes without writing")
   .action(async (options) => {
     await generateLike(options.dryRun ? "preview" : "updated", options);
+  });
+
+program
+  .command("clear-cache")
+  .description("Clear all local typeui.sh cache state.")
+  .action(async () => {
+    await clearCachedLicenseState();
+    console.log("Cleared local cache state.");
   });
 
 program.parseAsync().catch((error: unknown) => {

@@ -29,6 +29,7 @@ npx typeui.sh init
 
 - `typeui.sh verify` - verify Polar purchase and cache a local license.
 - `typeui.sh license` - show current cached license status.
+- `typeui.sh clear-cache` - remove all local cache state (`~/.typeui-sh`).
 - `typeui.sh init` - verify + prompt + generate files.
 - `typeui.sh generate` - generate files after license verification.
 - `typeui.sh update` - update existing files (managed section only).
@@ -38,35 +39,42 @@ Shared options:
 - `--providers codex,cursor,claude-code,open-code`
 - `--dry-run`
 
-## License verification (Polar)
+## License verification
 
 This CLI is gated by purchase verification.
 
-Required environment variables:
+CLI environment variables:
 
-- `POLAR_VERIFY_URL`: your verification API endpoint.
-- `POLAR_ACCESS_TOKEN`: bearer token used to call that endpoint.
+- `POLAR_VERIFY_URL`: base verification route (for example `http://localhost:3000/api/license/verify`).
+- `.env` is auto-loaded by the CLI (via `dotenv`), so local development can define `POLAR_VERIFY_URL` in project `.env`.
 
-Expected verify request payload:
+For `npx` distribution, do not require shared secrets in the CLI. Instead:
+
+- Keep the Polar API token only on your server.
+- Let the CLI send the license key to your server over HTTPS.
+- Have your server verify the key directly with Polar and return only a minimal verdict payload.
+- Add server-side protections (rate limiting, request logging, abuse controls).
+
+Expected verification request payload:
 
 ```json
 {
-  "productId": "typeui.sh",
-  "email": "buyer@example.com",
-  "purchaseToken": "polar_purchase_token"
+  "licenseKey": "1C285B2D-6CE6-4BC7-B8BE-ADB6A7E304DA"
 }
 ```
 
-Expected verify response payload:
+Expected verification response payload:
 
 ```json
 {
   "valid": true,
-  "expires_at": "2026-12-31T23:59:59.000Z"
+  "reason": "active",
+  "status": "granted"
 }
 ```
 
-On success, `typeui.sh` stores a minimal cache record at `~/.typeui-sh/license.json` and allows offline use until `expires_at`.
+On success, `typeui.sh` stores a minimal cache record at `~/.typeui-sh/license.json`.
+The local verification cache is short-lived unless your server returns an explicit `expiresAt` or `expires_at`.
 
 ## Generated file paths
 

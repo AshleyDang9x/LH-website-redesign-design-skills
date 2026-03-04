@@ -24,8 +24,7 @@ export interface ProviderFile {
 
 export interface LicenseCacheRecord {
   productId: string;
-  email: string;
   verifiedAt: string;
   expiresAt: string;
-  tokenFingerprint: string;
+  licenseKeyFingerprint: string;
 }

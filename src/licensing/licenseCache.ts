@@ -7,7 +7,7 @@ export async function readLicenseCache(): Promise<LicenseCacheRecord | null> {
   try {
     const raw = await fs.readFile(LICENSE_CACHE_PATH, "utf8");
     const parsed = JSON.parse(raw) as LicenseCacheRecord;
-    if (!parsed.productId || !parsed.expiresAt || !parsed.email) {
+    if (!parsed.productId || !parsed.expiresAt || !parsed.licenseKeyFingerprint) {
       return null;
     }
     if (parsed.productId !== PRODUCT_ID) {
@@ -35,4 +35,8 @@ export function isCacheRecordValid(record: LicenseCacheRecord): boolean {
 
 export function fingerprintToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex").slice(0, 16);
+}
+
+export async function clearLocalLicenseState(): Promise<void> {
+  await fs.rm(LICENSE_CACHE_DIR, { recursive: true, force: true });
 }

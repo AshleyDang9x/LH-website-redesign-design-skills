@@ -2,6 +2,7 @@ import { PRODUCT_ID } from "../config";
 import { promptLicenseCredentials } from "../prompts/license";
 import { LicenseCacheRecord } from "../types";
 import {
+  clearLocalLicenseState,
   fingerprintToken,
   isCacheRecordValid,
   readLicenseCache,
@@ -9,13 +10,12 @@ import {
 } from "./licenseCache";
 import { verifyPurchaseWithPolar } from "./polarClient";
 
-function buildCacheRecord(email: string, purchaseToken: string, expiresAt: string): LicenseCacheRecord {
+function buildCacheRecord(licenseKey: string, expiresAt: string): LicenseCacheRecord {
   return {
     productId: PRODUCT_ID,
-    email,
     verifiedAt: new Date().toISOString(),
     expiresAt,
-    tokenFingerprint: fingerprintToken(purchaseToken)
+    licenseKeyFingerprint: fingerprintToken(licenseKey)
   };
 }
 
@@ -25,25 +25,25 @@ export async function ensureVerifiedAccess(): Promise<void> {
     return;
   }
 
-  const { email, purchaseToken } = await promptLicenseCredentials();
-  const verifyResult = await verifyPurchaseWithPolar(email, purchaseToken);
+  const { licenseKey } = await promptLicenseCredentials();
+  const verifyResult = await verifyPurchaseWithPolar(licenseKey);
 
   if (!verifyResult.ok) {
     throw new Error(`License verification failed: ${verifyResult.reason}`);
   }
 
-  await writeLicenseCache(buildCacheRecord(email, purchaseToken, verifyResult.expiresAt));
+  await writeLicenseCache(buildCacheRecord(licenseKey, verifyResult.expiresAt));
 }
 
 export async function verifyAndCacheLicenseFromPrompt(): Promise<LicenseCacheRecord> {
-  const { email, purchaseToken } = await promptLicenseCredentials();
-  const verifyResult = await verifyPurchaseWithPolar(email, purchaseToken);
+  const { licenseKey } = await promptLicenseCredentials();
+  const verifyResult = await verifyPurchaseWithPolar(licenseKey);
 
   if (!verifyResult.ok) {
     throw new Error(`License verification failed: ${verifyResult.reason}`);
   }
 
-  const cacheRecord = buildCacheRecord(email, purchaseToken, verifyResult.expiresAt);
+  const cacheRecord = buildCacheRecord(licenseKey, verifyResult.expiresAt);
   await writeLicenseCache(cacheRecord);
   return cacheRecord;
 }
@@ -54,5 +54,9 @@ export async function getCachedLicenseSummary(): Promise<string> {
     return "No cached license.";
   }
   const status = isCacheRecordValid(cached) ? "valid" : "expired";
-  return `Cached license for ${cached.email} is ${status} until ${cached.expiresAt}.`;
+  return `Cached license (${cached.licenseKeyFingerprint}) is ${status} until ${cached.expiresAt}.`;
+}
+
+export async function clearCachedLicenseState(): Promise<void> {
+  await clearLocalLicenseState();
 }
