@@ -1,15 +1,20 @@
 # typeui.sh
 
-`typeui.sh` is a paid CLI that interviews your team about design-system decisions and generates provider-specific skill markdown files for:
+`typeui.sh` is a paid CLI that interviews you about your design system and generates `SKILL.md` files for AI coding agents.
 
-- Codex
-- Cursor
-- Claude Code
-- Open Code
+## Get a license
 
-It can also update existing files in-place using a managed block so your manual notes are preserved.
+You can purchase a license at [https://typeui.sh](https://typeui.sh).
+
+To use this CLI legally, each user must have a valid purchased license key.
 
 ## Install and run
+
+Use with `npx`:
+
+```bash
+npx typeui.sh --help
+```
 
 For local development:
 
@@ -19,75 +24,58 @@ npm run build
 node dist/cli.js --help
 ```
 
-Published usage target:
-
-```bash
-npx typeui.sh init
-```
-
 ## Commands
 
-- `typeui.sh verify` - verify Polar purchase and cache a local license.
-- `typeui.sh license` - show current cached license status.
-- `typeui.sh clear-cache` - remove all local cache state (`~/.typeui-sh`).
-- `typeui.sh init` - verify + prompt + generate files.
-- `typeui.sh generate` - generate files after license verification.
-- `typeui.sh update` - update existing files (managed section only).
+- `typeui.sh verify` - verify your license key and cache local license status.
+- `typeui.sh license` - show local cached license status.
+- `typeui.sh generate` - run the interactive design-system prompts and generate skill files.
+- `typeui.sh update` - update existing managed skill content in generated files.
+- `typeui.sh clear-cache` - remove local cache state (`~/.typeui-sh`).
 
-Shared options:
+Shared options for `generate` and `update`:
 
-- `--providers codex,cursor,claude-code,open-code`
-- `--dry-run`
+- `-p, --providers <providers>` (comma-separated provider keys)
+- `--dry-run` (preview changes without writing files)
 
-## License verification
+Examples:
 
-This CLI is gated by purchase verification.
-
-Verification endpoint:
-
-- `https://typeui.sh/api/license/verify` (fixed)
-
-For `npx` distribution, do not require shared secrets in the CLI. Instead:
-
-- Keep the Polar API token only on your server.
-- Let the CLI send the license key to your server over HTTPS.
-- Have your server verify the key directly with Polar and return only a minimal verdict payload.
-- Add server-side protections (rate limiting, request logging, abuse controls).
-
-Expected verification request payload:
-
-```json
-{
-  "licenseKey": "1C285B2D-6CE6-4BC7-B8BE-ADB6A7E304DA"
-}
+```bash
+npx typeui.sh verify
+npx typeui.sh generate
+npx typeui.sh update --dry-run
+npx typeui.sh generate --providers cursor,claude-code,mistral-vibe
 ```
 
-Expected verification response payload:
+## Generated files
 
-```json
-{
-  "valid": true,
-  "reason": "active",
-  "status": "granted"
-}
-```
+Universal target (always included):
 
-On success, `typeui.sh` stores a minimal cache record at `~/.typeui-sh/license.json`.
-The local verification cache is short-lived unless your server returns an explicit `expiresAt` or `expires_at`.
+- `.agents/skills/design-system/SKILL.md`
 
-## Generated file paths
+Optional additional targets can be selected interactively or via `--providers`.
+Each generated file path ends with:
 
-- `.codex/skills/design-system/SKILL.md`
+- `.../skills/design-system/SKILL.md`
+
+Common examples:
+
 - `.cursor/skills/design-system/SKILL.md`
 - `.claude/skills/design-system/SKILL.md`
+- `.codex/skills/design-system/SKILL.md`
 - `.opencode/skills/design-system/SKILL.md`
 
-Each file uses these markers for safe updates:
+## Safe updates
+
+Generated files include these managed markers:
 
 - `<!-- TYPEUI_SH_MANAGED_START -->`
 - `<!-- TYPEUI_SH_MANAGED_END -->`
 
-Only content between markers is replaced during updates.
+`typeui.sh update` only replaces content inside that managed block.
+
+## End-user guide
+
+For a full walkthrough (license activation and every prompt step), see `README.user.md`.
 
 ## Development
 

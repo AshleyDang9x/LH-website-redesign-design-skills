@@ -1,4 +1,4 @@
-import inquirer from "inquirer";
+type InquirerModule = typeof import("inquirer");
 import {
   DesignSystemSchema,
   ProviderSelectionSchema
@@ -12,6 +12,20 @@ import {
   Provider,
   SUPPORTED_PROVIDERS
 } from "../types";
+
+async function loadInquirer(): Promise<InquirerModule["default"]> {
+  const dynamicImport = new Function(
+    "specifier",
+    "return import(specifier)"
+  ) as (specifier: string) => Promise<InquirerModule>;
+  const inquirerModule = await dynamicImport("inquirer");
+  return inquirerModule.default;
+}
+
+async function prompt<T>(questions: unknown): Promise<T> {
+  const inquirer = await loadInquirer();
+  return (await inquirer.prompt(questions as never)) as T;
+}
 
 const providerChoices: { name: string; value: Provider }[] = OPTIONAL_PROVIDERS.map((provider) => ({
   name: `${PROVIDER_DETAILS[provider].title} (${PROVIDER_DETAILS[provider].relativePath.replace("/design-system/SKILL.md", "/")})`,
@@ -97,7 +111,7 @@ async function promptPresetSelection(options: {
   defaultSelected?: string[];
   defaultCustom?: string[];
 }): Promise<string[]> {
-  const selectedAnswer = await inquirer.prompt<{ selected: string[] }>([
+  const selectedAnswer = await prompt<{ selected: string[] }>([
     {
       type: "checkbox",
       name: "selected",
@@ -108,7 +122,7 @@ async function promptPresetSelection(options: {
     }
   ]);
 
-  const customAnswer = await inquirer.prompt<{ custom: string }>([
+  const customAnswer = await prompt<{ custom: string }>([
     {
       type: "input",
       name: "custom",
@@ -129,7 +143,7 @@ async function promptSinglePresetCheckboxSelection(options: {
 }): Promise<string> {
   const isKnown = options.defaultChoice ? options.presets.includes(options.defaultChoice) : true;
   const choices = options.defaultChoice && !isKnown ? [options.defaultChoice, ...options.presets] : options.presets;
-  const answer = await inquirer.prompt<{ value: string[] }>([
+  const answer = await prompt<{ value: string[] }>([
     {
       type: "checkbox",
       name: "value",
@@ -147,7 +161,7 @@ async function promptSingleCheckboxChoice(options: {
   choices: PromptChoice[];
   defaultChoice?: string;
 }): Promise<string> {
-  const answer = await inquirer.prompt<{ value: string[] }>([
+  const answer = await prompt<{ value: string[] }>([
     {
       type: "checkbox",
       name: "value",
@@ -190,7 +204,7 @@ async function promptFontSelection(options: {
     return selected;
   }
 
-  const custom = await inquirer.prompt<{ customFont: string }>([
+  const custom = await prompt<{ customFont: string }>([
     {
       type: "input",
       name: "customFont",
@@ -467,7 +481,7 @@ async function promptColorPaletteGuidance(current?: string): Promise<string> {
     defaultCustom: defaults.custom
   });
 
-  const tokenDetails = await inquirer.prompt<{
+  const tokenDetails = await prompt<{
     primary: string;
     secondary: string;
     success: string;
@@ -542,7 +556,7 @@ export async function promptProviders(): Promise<Provider[]> {
   }
   console.log("");
 
-  const answers = await inquirer.prompt<{ providers: Provider[] }>([
+  const answers = await prompt<{ providers: Provider[] }>([
     {
       type: "checkbox",
       name: "providers",
@@ -555,7 +569,7 @@ export async function promptProviders(): Promise<Provider[]> {
 }
 
 export async function promptDesignSystem(defaultProductName = "typeui.sh"): Promise<DesignSystemInput> {
-  const basics = await inquirer.prompt<{ productName: string; brandSummary: string }>([
+  const basics = await prompt<{ productName: string; brandSummary: string }>([
     {
       type: "input",
       name: "productName",
@@ -631,7 +645,7 @@ export async function promptDesignSystem(defaultProductName = "typeui.sh"): Prom
 }
 
 export async function promptDesignSystemFields(): Promise<DesignSystemField[]> {
-  const answers = await inquirer.prompt<{ fields: DesignSystemField[] }>([
+  const answers = await prompt<{ fields: DesignSystemField[] }>([
     {
       type: "checkbox",
       name: "fields",
@@ -653,7 +667,7 @@ export async function promptDesignSystemUpdates(
   for (const field of fields) {
     switch (field) {
       case "productName": {
-        const answer = await inquirer.prompt<{ productName: string }>([
+        const answer = await prompt<{ productName: string }>([
           {
             type: "input",
             name: "productName",
@@ -665,7 +679,7 @@ export async function promptDesignSystemUpdates(
         break;
       }
       case "brandSummary": {
-        const answer = await inquirer.prompt<{ brandSummary: string }>([
+        const answer = await prompt<{ brandSummary: string }>([
           {
             type: "input",
             name: "brandSummary",

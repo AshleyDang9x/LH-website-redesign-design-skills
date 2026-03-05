@@ -1,33 +1,40 @@
 {
   "name": "typeui.sh",
-  "version": "0.1.0",
-  "description": "Paid CLI to generate design-system skill files for AI coding providers",
+  "version": "0.1.3",
+  "description": "Generate design system specifications and style guides as skill files for AI coding providers",
   "main": "dist/cli.js",
   "bin": {
     "typeui.sh": "dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE.md"
+  ],
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "npm run build",
+    "release:check": "npm run typecheck && npm run test && npm pack --dry-run"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/themesberg/typeui.sh.cli.git"
-  },
-  "keywords": [],
-  "author": "typeui.sh",
-  "license": "UNLICENSED",
+  "keywords": [
+    "cli",
+    "design-system",
+    "skills",
+    "ai"
+  ],
+  "author": "https://bergside.com",
+  "license": "LICENSE.md",
   "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/themesberg/typeui.sh.cli/issues"
+  "engines": {
+    "node": ">=18"
   },
-  "homepage": "https://github.com/themesberg/typeui.sh.cli#readme",
+  "homepage": "https://typeui.sh",
   "dependencies": {
     "commander": "^14.0.3",
-    "dotenv": "^17.3.1",
-    "inquirer": "^13.3.0",
+    "inquirer": "^12.11.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {

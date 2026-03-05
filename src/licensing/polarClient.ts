@@ -21,7 +21,7 @@ interface PolarResponseShape {
   error?: string;
 }
 
-const VERIFY_CACHE_TTL_MINUTES = 15;
+const VERIFY_CACHE_TTL_DAYS = 31;
 
 export async function verifyPurchaseWithPolar(licenseKey: string): Promise<PolarVerifyResult> {
   const verifyUrl = getPolarVerifyUrl();
@@ -67,10 +67,7 @@ export async function verifyPurchaseWithPolar(licenseKey: string): Promise<Polar
 
   return {
     ok: true,
-    // Keep a short-lived local grant unless server returns explicit expiry.
-    expiresAt:
-      data.expiresAt ??
-      data.expires_at ??
-      new Date(Date.now() + VERIFY_CACHE_TTL_MINUTES * 60 * 1000).toISOString()
+    // Local cache is fixed to 31 days from verification.
+    expiresAt: new Date(Date.now() + VERIFY_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString()
   };
 }
