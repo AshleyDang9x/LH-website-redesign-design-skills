@@ -192,4 +192,5 @@ export interface LicenseCacheRecord {
   verifiedAt: string;
   expiresAt: string;
   licenseKeyFingerprint: string;
+  licenseKey?: string;
 }

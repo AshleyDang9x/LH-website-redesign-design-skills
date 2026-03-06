@@ -15,7 +15,8 @@ function buildCacheRecord(licenseKey: string, expiresAt: string): LicenseCacheRe
     productId: PRODUCT_ID,
     verifiedAt: new Date().toISOString(),
     expiresAt,
-    licenseKeyFingerprint: fingerprintToken(licenseKey)
+    licenseKeyFingerprint: fingerprintToken(licenseKey),
+    licenseKey
   };
 }
 
@@ -33,6 +34,23 @@ export async function ensureVerifiedAccess(): Promise<void> {
   }
 
   await writeLicenseCache(buildCacheRecord(licenseKey, verifyResult.expiresAt));
+}
+
+export async function getVerifiedLicenseKey(): Promise<string> {
+  const cached = await readLicenseCache();
+  if (cached && isCacheRecordValid(cached) && cached.licenseKey) {
+    return cached.licenseKey;
+  }
+
+  const { licenseKey } = await promptLicenseCredentials();
+  const verifyResult = await verifyPurchaseWithPolar(licenseKey);
+
+  if (!verifyResult.ok) {
+    throw new Error(`License verification failed: ${verifyResult.reason}`);
+  }
+
+  await writeLicenseCache(buildCacheRecord(licenseKey, verifyResult.expiresAt));
+  return licenseKey;
 }
 
 export async function verifyAndCacheLicenseFromPrompt(): Promise<LicenseCacheRecord> {

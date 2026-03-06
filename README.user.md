@@ -13,7 +13,6 @@ This guide is for end users who run the `typeui.sh` CLI in a project to generate
 
 - Node.js 18+ recommended
 - A valid license key from your Polar purchase
-- Internet access to reach `https://typeui.sh/api/license/verify`
 
 ## Install and run
 
@@ -122,13 +121,59 @@ The CLI will:
 - Ask which fields to update
 - Rewrite only the managed block in each `SKILL.md`
 
+## Pull a published registry skill
+
+Use this when you already know the published skill slug and want to fetch the authored markdown directly:
+
+```bash
+npx typeui.sh pull paper
+```
+
+Behavior:
+
+- The CLI asks for provider targets the same way as `generate/update` (unless `--providers` is passed).
+- Universal target is always included.
+- The CLI uses the cached license key if present; otherwise it prompts for one and verifies it.
+- The CLI sends `POST /api/registry/pull/:slug` with `{ "licenseKey": "..." }`.
+- On success, the pulled markdown is written to selected provider `SKILL.md` paths.
+
+You can combine `pull` with `--providers` and `--dry-run`:
+
+```bash
+npx typeui.sh pull paper --providers cursor,codex
+npx typeui.sh pull paper --dry-run
+```
+
+## List available registry specs
+
+Use this to choose one available design-system spec for your current license, then pull it immediately:
+
+```bash
+npx typeui.sh list
+```
+
+Behavior:
+
+- The CLI uses your cached license key when available; otherwise it prompts and verifies.
+- The CLI sends `POST /api/registry/specs` with `{ "licenseKey": "..." }`.
+- On success, it shows a checkbox selection where exactly one spec can be selected.
+- After you confirm the selection, the CLI automatically runs pull for that slug.
+
+You can pass pull options through list:
+
+```bash
+npx typeui.sh list --providers cursor,codex
+npx typeui.sh list --dry-run
+```
+
 ## Preview changes without writing files
 
-Use `--dry-run` with generate or update:
+Use `--dry-run` with generate, update, or pull:
 
 ```bash
 npx typeui.sh generate --dry-run
 npx typeui.sh update --dry-run
+npx typeui.sh pull paper --dry-run
 ```
 
 ## Select providers from CLI options
@@ -169,3 +214,9 @@ Examples:
   - Run `npx typeui.sh generate` first.
 - **Wrong files generated**
   - Re-run with `--dry-run` to verify target paths before writing.
+- **"Registry pull failed: license_invalid"**
+  - Re-check your license key and ensure it is active.
+- **"Registry pull failed: not_found"**
+  - Verify the slug exists and has published markdown.
+- **"Registry specs failed: license_invalid"**
+  - Re-check your license key and ensure it is active.

@@ -7,7 +7,8 @@ describe("isCacheRecordValid", () => {
       productId: "typeui.sh",
       verifiedAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
-      licenseKeyFingerprint: "abcd"
+      licenseKeyFingerprint: "abcd",
+      licenseKey: "license_valid_123"
     });
     expect(valid).toBe(true);
   });

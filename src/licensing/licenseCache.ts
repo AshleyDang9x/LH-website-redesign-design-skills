@@ -6,14 +6,20 @@ import { LicenseCacheRecord } from "../types";
 export async function readLicenseCache(): Promise<LicenseCacheRecord | null> {
   try {
     const raw = await fs.readFile(LICENSE_CACHE_PATH, "utf8");
-    const parsed = JSON.parse(raw) as LicenseCacheRecord;
+    const parsed = JSON.parse(raw) as Partial<LicenseCacheRecord>;
     if (!parsed.productId || !parsed.expiresAt || !parsed.licenseKeyFingerprint) {
       return null;
     }
     if (parsed.productId !== PRODUCT_ID) {
       return null;
     }
-    return parsed;
+    return {
+      productId: parsed.productId,
+      verifiedAt: parsed.verifiedAt ?? new Date().toISOString(),
+      expiresAt: parsed.expiresAt,
+      licenseKeyFingerprint: parsed.licenseKeyFingerprint,
+      licenseKey: typeof parsed.licenseKey === "string" ? parsed.licenseKey : undefined
+    };
   } catch (error) {
     const e = error as NodeJS.ErrnoException;
     if (e.code === "ENOENT") {

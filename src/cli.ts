@@ -4,6 +4,7 @@ import { Command } from "commander";
 import {
   clearCachedLicenseState,
   ensureVerifiedAccess,
+  getVerifiedLicenseKey,
   getCachedLicenseSummary,
   verifyAndCacheLicenseFromPrompt
 } from "./licensing/licenseService";
@@ -13,8 +14,12 @@ import {
   promptDesignSystemUpdates,
   promptProviders
 } from "./prompts/designSystem";
+import { promptRegistrySpecSelection } from "./prompts/registry";
+import { RegistrySlugSchema } from "./domain/designSystemSchema";
 import { loadExistingDesignSystem } from "./generation/existingDesignSystem";
 import { runGeneration } from "./generation/runGeneration";
+import { runPull } from "./generation/runPull";
+import { listRegistrySpecs, pullSkillMarkdown } from "./registry/registryClient";
 import { ALWAYS_INCLUDED_PROVIDERS, DesignSystemInput, Provider, SUPPORTED_PROVIDERS } from "./types";
 import { printBanner } from "./ui/banner";
 
@@ -41,7 +46,7 @@ function parseProviderOption(raw?: string): Provider[] | null {
   return values as Provider[];
 }
 
-function printResults(mode: "generated" | "updated" | "preview", results: Array<{ filePath: string; changed: boolean }>) {
+function printResults(mode: "generated" | "updated" | "preview" | "pulled", results: Array<{ filePath: string; changed: boolean }>) {
   console.log("");
   for (const result of results) {
     const state = result.changed ? mode : "unchanged";
@@ -77,6 +82,48 @@ async function generateLike(mode: "generated" | "updated" | "preview", options: 
     dryRun: Boolean(options.dryRun)
   });
   printResults(mode, results);
+}
+
+async function pullLike(slug: string, options: { providers?: string; dryRun?: boolean }) {
+  const parsedSlug = RegistrySlugSchema.safeParse(slug);
+  if (!parsedSlug.success) {
+    throw new Error(parsedSlug.error.issues[0]?.message ?? "Invalid slug.");
+  }
+  const selectedProviders = parseProviderOption(options.providers) ?? (await promptProviders());
+  const providers = [...new Set<Provider>([...ALWAYS_INCLUDED_PROVIDERS, ...selectedProviders])];
+  const licenseKey = await getVerifiedLicenseKey();
+  const pullResult = await pullSkillMarkdown(parsedSlug.data, licenseKey);
+  if (!pullResult.ok) {
+    throw new Error(`Registry pull failed: ${pullResult.reason}`);
+  }
+  const results = await runPull({
+    projectRoot: process.cwd(),
+    providers,
+    markdown: pullResult.markdown,
+    dryRun: Boolean(options.dryRun)
+  });
+  printResults(options.dryRun ? "preview" : "pulled", results);
+}
+
+async function listLike(options: { providers?: string; dryRun?: boolean }) {
+  const licenseKey = await getVerifiedLicenseKey();
+  const specsResult = await listRegistrySpecs(licenseKey);
+  if (!specsResult.ok) {
+    throw new Error(`Registry specs failed: ${specsResult.reason}`);
+  }
+
+  if (specsResult.specs.length === 0) {
+    console.log("No registry specs available.");
+    return;
+  }
+
+  const selectableSpecs = specsResult.specs.filter((spec) => spec.hasSkillMd);
+  if (selectableSpecs.length === 0) {
+    throw new Error("No pullable registry specs available for this license.");
+  }
+
+  const selected = await promptRegistrySpecSelection(specsResult.specs);
+  await pullLike(selected.slug, options);
 }
 
 const program = new Command();
@@ -127,6 +174,24 @@ program
   .option("--dry-run", "Preview file changes without writing")
   .action(async (options) => {
     await generateLike(options.dryRun ? "preview" : "updated", options);
+  });
+
+program
+  .command("pull <slug>")
+  .description("Pull a registry skill by slug and write selected provider files.")
+  .option("-p, --providers <providers>", "Comma-separated providers")
+  .option("--dry-run", "Preview file changes without writing")
+  .action(async (slug, options) => {
+    await pullLike(slug, options);
+  });
+
+program
+  .command("list")
+  .description("List available license-gated registry design system specs.")
+  .option("-p, --providers <providers>", "Comma-separated providers")
+  .option("--dry-run", "Preview file changes without writing")
+  .action(async (options) => {
+    await listLike(options);
   });
 
 program

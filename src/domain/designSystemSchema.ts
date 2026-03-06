@@ -49,4 +49,11 @@ export const FlatDesignSystemPromptSchema = z.object({
   dontRules: nonEmptyList
 });
 
+export const RegistrySlugSchema = z
+  .string()
+  .trim()
+  .min(1, "Slug is required.")
+  .max(100, "Slug is too long.")
+  .regex(/^[a-z0-9](?:[a-z0-9-_]*[a-z0-9])?$/, "Slug must contain only lowercase letters, numbers, dashes, or underscores.");
+
 export type DesignSystemSchemaType = z.infer<typeof DesignSystemSchema>;

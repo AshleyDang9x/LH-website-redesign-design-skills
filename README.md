@@ -1,6 +1,8 @@
 # typeui.sh
 
-`typeui.sh` is a paid CLI that interviews you about your design system and generates `SKILL.md` files for AI coding agents.
+[![typeui CLI screenshot](https://flowbite.s3.us-east-1.amazonaws.com/github/typeui.png)](https://www.typeui.sh)
+
+[typeui.sh](https://www.typeui.sh) is a CLI that interviews you about your design system and generates `SKILL.md` files for AI coding agents.
 
 ## Get a license
 
@@ -30,6 +32,8 @@ node dist/cli.js --help
 - `typeui.sh license` - show local cached license status.
 - `typeui.sh generate` - run the interactive design-system prompts and generate skill files.
 - `typeui.sh update` - update existing managed skill content in generated files.
+- `typeui.sh pull <slug>` - pull a registry skill and write it to selected provider paths.
+- `typeui.sh list` - choose one available registry spec, then pull it automatically.
 - `typeui.sh clear-cache` - remove local cache state (`~/.typeui-sh`).
 
 Shared options for `generate` and `update`:
@@ -37,14 +41,32 @@ Shared options for `generate` and `update`:
 - `-p, --providers <providers>` (comma-separated provider keys)
 - `--dry-run` (preview changes without writing files)
 
+Shared options for `pull`:
+
+- `-p, --providers <providers>` (comma-separated provider keys)
+- `--dry-run` (preview changes without writing files)
+
+Shared options for `list`:
+
+- `-p, --providers <providers>` (comma-separated providers passed through to auto-pull)
+- `--dry-run` (preview pull file changes without writing)
+
 Examples:
 
 ```bash
 npx typeui.sh verify
 npx typeui.sh generate
 npx typeui.sh update --dry-run
+npx typeui.sh pull paper
+npx typeui.sh pull paper --providers cursor,claude-code
+npx typeui.sh list
+npx typeui.sh list --providers cursor,codex --dry-run
 npx typeui.sh generate --providers cursor,claude-code,mistral-vibe
 ```
+
+## Registry API docs
+
+Request-level details for `pull` and `list` live in `README.registry-api.md`.
 
 ## Generated files
 
