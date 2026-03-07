@@ -5,3 +5,10 @@ dist
 .typeui-sh
 coverage
 .tmp-tests
+/agent
+/agents
+/cursor
+/claude
+/codex
+/opencode
+/mistral-vibe
