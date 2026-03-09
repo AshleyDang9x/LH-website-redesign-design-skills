@@ -1,4 +1,4 @@
-import { PRODUCT_ID } from "../config";
+import { PRICING_URL, PRODUCT_ID } from "../config";
 import { promptLicenseCredentials } from "../prompts/license";
 import { LicenseCacheRecord } from "../types";
 import {
@@ -20,6 +20,23 @@ function buildCacheRecord(licenseKey: string, expiresAt: string): LicenseCacheRe
   };
 }
 
+function isInvalidLicenseReason(reason: string): boolean {
+  const normalized = reason.toLowerCase();
+  return (
+    normalized === "not_found" ||
+    normalized.includes("license_invalid") ||
+    normalized.includes("license key is not valid") ||
+    normalized.includes("invalid license")
+  );
+}
+
+function withLicensePurchaseHelp(reason: string): string {
+  if (!isInvalidLicenseReason(reason)) {
+    return reason;
+  }
+  return `${reason} You can get a license key at ${PRICING_URL}.`;
+}
+
 export async function ensureVerifiedAccess(): Promise<void> {
   const cached = await readLicenseCache();
   if (cached && isCacheRecordValid(cached)) {
@@ -30,7 +47,7 @@ export async function ensureVerifiedAccess(): Promise<void> {
   const verifyResult = await verifyPurchaseWithPolar(licenseKey);
 
   if (!verifyResult.ok) {
-    throw new Error(`License verification failed: ${verifyResult.reason}`);
+    throw new Error(`License verification failed: ${withLicensePurchaseHelp(verifyResult.reason)}`);
   }
 
   await writeLicenseCache(buildCacheRecord(licenseKey, verifyResult.expiresAt));
@@ -46,7 +63,7 @@ export async function getVerifiedLicenseKey(): Promise<string> {
   const verifyResult = await verifyPurchaseWithPolar(licenseKey);
 
   if (!verifyResult.ok) {
-    throw new Error(`License verification failed: ${verifyResult.reason}`);
+    throw new Error(`License verification failed: ${withLicensePurchaseHelp(verifyResult.reason)}`);
   }
 
   await writeLicenseCache(buildCacheRecord(licenseKey, verifyResult.expiresAt));
@@ -58,7 +75,7 @@ export async function verifyAndCacheLicenseFromPrompt(): Promise<LicenseCacheRec
   const verifyResult = await verifyPurchaseWithPolar(licenseKey);
 
   if (!verifyResult.ok) {
-    throw new Error(`License verification failed: ${verifyResult.reason}`);
+    throw new Error(`License verification failed: ${withLicensePurchaseHelp(verifyResult.reason)}`);
   }
 
   const cacheRecord = buildCacheRecord(licenseKey, verifyResult.expiresAt);

@@ -5,6 +5,7 @@ export const PRODUCT_ID = "typeui.sh";
 export const MANAGED_BLOCK_START = "<!-- TYPEUI_SH_MANAGED_START -->";
 export const MANAGED_BLOCK_END = "<!-- TYPEUI_SH_MANAGED_END -->";
 export const API_DOMAIN = "https://www.typeui.sh";
+export const PRICING_URL = "https://www.typeui.sh/#pricing";
 export const POLAR_VERIFY_URL = `${API_DOMAIN}/api/license/verify`;
 export const REGISTRY_PULL_BASE_URL = `${API_DOMAIN}/api/registry/pull`;
 export const REGISTRY_SPECS_URL = `${API_DOMAIN}/api/registry/specs`;
