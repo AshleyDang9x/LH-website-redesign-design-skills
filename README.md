@@ -19,6 +19,10 @@ You can start building with TypeUI by using the NPX command:
 npx typeui.sh --help
 ```
 
+## Design systems
+
+Check out all [design systems](typeui.sh/design-systems) that can be pulled into your project.
+
 ## Available commands
 
 | Command | Description |
