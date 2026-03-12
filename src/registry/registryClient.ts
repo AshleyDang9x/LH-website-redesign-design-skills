@@ -1,5 +1,5 @@
+import { getDesignSystemUrl, getRegistryPullUrl, getRegistrySpecsUrl } from "../config";
 import { RegistrySlugSchema } from "../domain/designSystemSchema";
-import { getRegistryPullUrl, getRegistrySpecsUrl } from "../config";
 
 interface PullFailure {
   ok: false;
@@ -13,12 +13,6 @@ interface PullSuccess {
 
 export type RegistryPullResult = PullFailure | PullSuccess;
 
-interface PullFailureBody {
-  ok?: boolean;
-  reason?: string;
-  error?: string;
-}
-
 export interface RegistrySpec {
   name: string;
   slug: string;
@@ -27,37 +21,96 @@ export interface RegistrySpec {
   hasSkillMd: boolean;
 }
 
-interface SpecsSuccessBody {
-  ok?: boolean;
-  specs?: RegistrySpec[];
+interface RegistryIndexEntry {
+  slug: string;
+  name: string;
+  skillPath: string;
 }
 
-function mapHttpFailure(status: number, reason?: string): string {
-  const normalizedReason = reason?.trim();
+type RegistryIndex = Record<string, RegistryIndexEntry>;
+
+function mapRegistryHttpFailure(status: number, action: string): string {
   switch (status) {
-    case 400:
-      return normalizedReason || "Invalid request. Check the slug and license key format.";
-    case 403:
-      return normalizedReason || "license_invalid";
     case 404:
-      return normalizedReason || "not_found";
-    case 429:
-      return normalizedReason || "Rate limited. Please try again in a moment.";
-    case 500:
-      return normalizedReason || "Server is missing required configuration.";
-    case 502:
-      return normalizedReason || "Registry dependency is temporarily unavailable.";
+      return "not_found";
     default:
-      return normalizedReason || `Unexpected registry response (${status}).`;
+      return `Unexpected registry response (${status}) while ${action}.`;
   }
 }
 
-async function tryReadFailureJson(response: Response): Promise<PullFailureBody | null> {
-  try {
-    return (await response.json()) as PullFailureBody;
-  } catch {
+function parseRegistryIndex(payload: unknown): RegistryIndex | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return null;
   }
+
+  const entries = Object.entries(payload as Record<string, unknown>);
+  const index: RegistryIndex = {};
+
+  for (const [key, rawValue] of entries) {
+    if (!rawValue || typeof rawValue !== "object" || Array.isArray(rawValue)) {
+      return null;
+    }
+    const candidate = rawValue as Partial<RegistryIndexEntry>;
+    if (typeof candidate.slug !== "string" || typeof candidate.name !== "string" || typeof candidate.skillPath !== "string") {
+      return null;
+    }
+    index[key] = {
+      slug: candidate.slug,
+      name: candidate.name,
+      skillPath: candidate.skillPath
+    };
+  }
+
+  return index;
+}
+
+async function fetchRegistryIndex(): Promise<{ ok: true; index: RegistryIndex } | PullFailure> {
+  const endpoint = getRegistrySpecsUrl();
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        accept: "application/json"
+      }
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      ok: false,
+      reason: `Could not reach registry index at ${endpoint}: ${message}`
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      reason: mapRegistryHttpFailure(response.status, "fetching registry index")
+    };
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    return {
+      ok: false,
+      reason: "Registry returned invalid index JSON."
+    };
+  }
+
+  const index = parseRegistryIndex(payload);
+  if (!index) {
+    return {
+      ok: false,
+      reason: "Registry index has an unexpected format."
+    };
+  }
+
+  return {
+    ok: true,
+    index
+  };
 }
 
 export async function pullSkillMarkdown(slug: string): Promise<RegistryPullResult> {
@@ -69,34 +122,52 @@ export async function pullSkillMarkdown(slug: string): Promise<RegistryPullResul
     };
   }
 
-  const endpoint = getRegistryPullUrl(parsedSlug.data);
+  const indexResult = await fetchRegistryIndex();
+  if (!indexResult.ok) {
+    return indexResult;
+  }
+
+  const entry = indexResult.index[parsedSlug.data];
+  if (!entry) {
+    return {
+      ok: false,
+      reason: "not_found"
+    };
+  }
+  if (!entry.skillPath.trim()) {
+    return {
+      ok: false,
+      reason: `No skill markdown path found for slug '${parsedSlug.data}'.`
+    };
+  }
+
+  const endpoint = getRegistryPullUrl(entry.skillPath);
   let response: Response;
   try {
     response = await fetch(endpoint, {
-      method: "POST",
+      method: "GET",
       headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({})
+        accept: "text/markdown, text/plain;q=0.9, */*;q=0.8"
+      }
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {
       ok: false,
-      reason: `Could not reach registry service at ${endpoint}: ${message}`
+      reason: `Could not reach registry markdown at ${endpoint}: ${message}`
     };
   }
 
   if (!response.ok) {
-    const body = await tryReadFailureJson(response);
     return {
       ok: false,
-      reason: mapHttpFailure(response.status, body?.reason || body?.error)
+      reason: mapRegistryHttpFailure(response.status, `fetching markdown for '${parsedSlug.data}'`)
     };
   }
 
   const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.toLowerCase().includes("text/markdown")) {
+  const normalizedContentType = contentType.toLowerCase();
+  if (!normalizedContentType.includes("text/markdown") && !normalizedContentType.includes("text/plain")) {
     return {
       ok: false,
       reason: `Unexpected content type from registry: ${contentType || "unknown"}.`
@@ -114,72 +185,24 @@ export async function pullSkillMarkdown(slug: string): Promise<RegistryPullResul
   return { ok: true, markdown };
 }
 
-function mapSpecsFailure(status: number, reason?: string): string {
-  const normalizedReason = reason?.trim();
-  switch (status) {
-    case 400:
-      return normalizedReason || "Invalid request. Check the license key format.";
-    case 403:
-      return normalizedReason || "license_invalid";
-    case 429:
-      return normalizedReason || "Rate limited. Please try again in a moment.";
-    case 500:
-      return normalizedReason || "Server is missing required configuration.";
-    case 502:
-      return normalizedReason || "Registry dependency is temporarily unavailable.";
-    default:
-      return normalizedReason || `Unexpected registry response (${status}).`;
-  }
-}
-
 export type RegistrySpecsResult = { ok: true; specs: RegistrySpec[] } | PullFailure;
 
 export async function listRegistrySpecs(): Promise<RegistrySpecsResult> {
-  const endpoint = getRegistrySpecsUrl();
-  let response: Response;
-  try {
-    response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({})
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      ok: false,
-      reason: `Could not reach registry service at ${endpoint}: ${message}`
-    };
+  const indexResult = await fetchRegistryIndex();
+  if (!indexResult.ok) {
+    return indexResult;
   }
 
-  if (!response.ok) {
-    const body = await tryReadFailureJson(response);
-    return {
-      ok: false,
-      reason: mapSpecsFailure(response.status, body?.reason || body?.error)
-    };
-  }
-
-  let payload: SpecsSuccessBody;
-  try {
-    payload = (await response.json()) as SpecsSuccessBody;
-  } catch {
-    return {
-      ok: false,
-      reason: "Registry returned invalid JSON."
-    };
-  }
-
-  if (!payload.ok || !Array.isArray(payload.specs)) {
-    return {
-      ok: false,
-      reason: "Registry response did not include specs."
-    };
-  }
+  const specs = Object.values(indexResult.index).map((entry) => ({
+    name: entry.name,
+    slug: entry.slug,
+    image: "",
+    previewUrl: getDesignSystemUrl(entry.slug),
+    hasSkillMd: Boolean(entry.skillPath.trim())
+  }));
 
   return {
     ok: true,
-    specs: payload.specs
+    specs
   };
 }

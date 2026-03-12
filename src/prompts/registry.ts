@@ -1,5 +1,5 @@
 type InquirerModule = typeof import("inquirer");
-import { getDesignSystemUrl } from "../config";
+import { getDesignSystemPreviewUrl } from "../config";
 import { RegistrySpec } from "../registry/registryClient";
 
 async function loadInquirer(): Promise<InquirerModule["default"]> {
@@ -17,7 +17,7 @@ async function prompt<T>(questions: unknown): Promise<T> {
 
 export async function promptRegistrySpecSelection(specs: RegistrySpec[]): Promise<RegistrySpec> {
   const choices = specs.map((spec) => ({
-    name: `${spec.name} (${getDesignSystemUrl(spec.slug).replace(/^https?:\/\//, "")})${
+    name: `${spec.name} (${getDesignSystemPreviewUrl(spec.slug).replace(/^https?:\/\//, "")})${
       spec.hasSkillMd ? "" : " - no skill markdown"
     }`,
     value: spec.slug,

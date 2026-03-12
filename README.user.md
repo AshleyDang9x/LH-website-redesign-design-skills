@@ -12,7 +12,7 @@ This guide is for end users who run the `typeui.sh` CLI in a project to generate
 ## Before you start
 
 - Node.js 18+ recommended
-- A valid license key from your Polar purchase (required for `pull` and `list`; not required for `generate` or `update`)
+- A valid license key from your Polar purchase (optional, only needed for pro features such as `verify`/`license`)
 
 ## Install and run
 
@@ -28,7 +28,7 @@ Or if the package is already installed globally:
 typeui.sh --help
 ```
 
-## License key activation for registry commands (Polar purchase)
+## License key activation (optional, Polar purchase)
 
 ### 1) Get your license key
 
@@ -40,7 +40,7 @@ After purchase, Polar provides your license key. Copy it exactly.
 
 - `https://typeui.sh/api/license/verify`
 
-### 3) Activate in CLI (for `pull` and `list`)
+### 3) Activate in CLI (for license-aware commands)
 
 Run:
 
@@ -123,7 +123,7 @@ The CLI will:
 
 ## Pull a published registry skill
 
-Use this when you already know the published skill slug and want to fetch the authored markdown directly:
+Use this when you already know the published skill slug and want to fetch the authored markdown directly from [bergside/awesome-design-skills](https://github.com/bergside/awesome-design-skills):
 
 ```bash
 npx typeui.sh pull paper
@@ -133,9 +133,7 @@ Behavior:
 
 - The CLI asks for provider targets the same way as `generate/update` (unless `--providers` is passed).
 - Universal target is always included.
-- This command requires an activated license.
-- The CLI uses the cached license key if present; otherwise it prompts for one and verifies it.
-- The CLI sends `POST /api/registry/pull/:slug` with `{ "licenseKey": "..." }`.
+- The CLI fetches `skills/index.json` from the registry repository, resolves the slug's `skillPath`, then fetches the corresponding `SKILL.md`.
 - On success, the pulled markdown is written to selected provider `SKILL.md` paths.
 
 You can combine `pull` with `--providers` and `--dry-run`:
@@ -147,7 +145,7 @@ npx typeui.sh pull paper --dry-run
 
 ## List available registry specs
 
-Use this to choose one available design-system spec for your current license, then pull it immediately:
+Use this to choose one available design-system spec from the GitHub registry, then pull it immediately:
 
 ```bash
 npx typeui.sh list
@@ -155,9 +153,7 @@ npx typeui.sh list
 
 Behavior:
 
-- This command requires an activated license.
-- The CLI uses your cached license key when available; otherwise it prompts and verifies.
-- The CLI sends `POST /api/registry/specs` with `{ "licenseKey": "..." }`.
+- The CLI fetches `skills/index.json` from `bergside/awesome-design-skills`.
 - On success, it shows a checkbox selection where exactly one spec can be selected.
 - After you confirm the selection, the CLI automatically runs pull for that slug.
 
@@ -209,16 +205,12 @@ Examples:
 
 - **"License verification failed"**
   - Check your key.
-  - Confirm you can reach `https://typeui.sh/api/license/verify`.
+  - Confirm you can reach `https://www.typeui.sh/api/license/verify`.
 - **"No cached license"**
   - Run `npx typeui.sh verify`.
 - **"No existing managed design system found" on update**
   - Run `npx typeui.sh generate` first.
 - **Wrong files generated**
   - Re-run with `--dry-run` to verify target paths before writing.
-- **"Registry pull failed: license_invalid"**
-  - Re-check your license key and ensure it is active.
 - **"Registry pull failed: not_found"**
   - Verify the slug exists and has published markdown.
-- **"Registry specs failed: license_invalid"**
-  - Re-check your license key and ensure it is active.

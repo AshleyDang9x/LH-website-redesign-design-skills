@@ -1,74 +1,48 @@
-# Registry API (CLI Integration)
+# Registry Source (GitHub)
 
-This document captures request/response details used by the CLI registry commands.
+This document captures how CLI registry commands resolve data from the GitHub repository:
 
-## Registry pull API (for CLI)
+- [https://github.com/bergside/awesome-design-skills](https://github.com/bergside/awesome-design-skills)
 
-The `pull` command calls:
+## Index source used by `list` and `pull`
 
-- `POST /api/registry/pull/:slug`
+Both commands read:
 
-Request payload:
+- `GET https://raw.githubusercontent.com/bergside/awesome-design-skills/main/skills/index.json`
 
-```json
-{
-  "licenseKey": "<license_key>"
-}
-```
-
-Behavior:
-
-- License is verified server-side first.
-- `skillMd` is fetched only for valid licenses.
-- Success response body is raw markdown with `Content-Type: text/markdown; charset=utf-8`.
-- Protected responses use `Cache-Control: no-store`.
-
-Typical responses:
-
-- `200` with raw markdown body when license is valid and the slug exists.
-- `403` with `{"ok": false, "reason": "license_invalid"}` when license is invalid/inactive.
-- `404` with `{"ok": false, "reason": "not_found"}` when slug is missing or has no markdown.
-- `400` for malformed request JSON, invalid license key, or invalid slug.
-- `429` when pull requests are rate-limited.
-- `500` for missing server configuration.
-- `502` when upstream Polar/Convex dependencies are unreachable.
-
-## Registry specs API (license-gated)
-
-The `list` command calls:
-
-- `POST /api/registry/specs`
-
-Request payload:
+Expected shape:
 
 ```json
 {
-  "licenseKey": "<license_key>"
+  "paper": {
+    "slug": "paper",
+    "name": "Paper",
+    "skillPath": "skills/paper/SKILL.md"
+  }
 }
 ```
 
-Success response:
+The CLI maps each index entry to:
 
-```json
-{
-  "ok": true,
-  "specs": [
-    {
-      "name": "Paper",
-      "slug": "paper",
-      "image": "/registry-examples/paper.png",
-      "previewUrl": "#",
-      "hasSkillMd": true
-    }
-  ]
-}
-```
+- `name` -> display name
+- `slug` -> selection and pull key
+- `previewUrl` -> repository page (`/tree/main/skills/<slug>`)
+- `hasSkillMd` -> `true` when `skillPath` is non-empty
 
-Typical responses:
+## Pull behavior
 
-- `200` with `specs` when license is valid.
-- `403` with `{"ok": false, "reason": "license_invalid"}` when license is invalid/inactive.
-- `400` for malformed request JSON or invalid license key.
-- `429` when requests are rate-limited.
-- `500` for missing server configuration.
-- `502` when upstream Polar/Convex dependencies are unreachable.
+For `pull <slug>`:
+
+1. Validate slug format locally.
+2. Read `skills/index.json`.
+3. Resolve `index[slug].skillPath`.
+4. Fetch markdown from raw GitHub URL:
+   - `GET https://raw.githubusercontent.com/bergside/awesome-design-skills/main/<skillPath>`
+
+On success, response is markdown text (`text/markdown` or plain text accepted).
+
+Common failure reasons surfaced by CLI:
+
+- `not_found` (missing slug in index or missing markdown file)
+- invalid index JSON/shape
+- network/unreachable raw GitHub URLs

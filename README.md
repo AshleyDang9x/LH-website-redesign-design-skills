@@ -25,8 +25,8 @@ npx typeui.sh --help
 | --- | --- |
 | `generate` | Run the interactive design system prompts and generate skill files. |
 | `update` | Update existing managed skill content in generated files. |
-| `pull <slug>` | Pull a registry skill and write it to selected provider paths. |
-| `list` | Show available registry specs (including design system links), then pull one automatically. |
+| `pull <slug>` | Pull a registry skill from `bergside/awesome-design-skills` and write it to selected provider paths. |
+| `list` | Show available registry specs from `bergside/awesome-design-skills` (with typeui.sh preview links), then pull one automatically. |
 | `verify` | Verify your license key (pro version) and cache local license status. |
 | `license` | Show local cached license status. |
 | `clear-cache` | Remove local cache state (`~/.typeui-sh`). |
