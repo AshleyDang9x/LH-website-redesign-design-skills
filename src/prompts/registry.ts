@@ -34,6 +34,9 @@ export async function promptRegistrySpecSelection(specs: RegistrySpec[]): Promis
     }
   ]);
 
+  if (!answer.selected[0]) {
+    throw new Error("No registry spec was selected.");
+  }
   const selected = specs.find((spec) => spec.slug === answer.selected[0]);
   if (!selected) {
     throw new Error("Failed to resolve selected registry spec.");

@@ -118,7 +118,7 @@ export const PROVIDER_DETAILS = {
   },
   "trae-cn": {
     title: "Trae CN",
-    relativePath: ".trae/skills/design-system/SKILL.md"
+    relativePath: ".trae-cn/skills/design-system/SKILL.md"
   },
   windsurf: {
     title: "Windsurf",
