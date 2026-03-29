@@ -1,0 +1,76 @@
+/*
+  Fix: Remove horizontal scroll / white space when swiping left on mobile
+  
+  HOW TO APPLY IN SHOPIFY:
+  1. Go to Online Store > Themes > Customize
+  2. Click on "Theme settings" (bottom left)
+  3. Go to "Custom CSS" tab
+  4. Paste the CSS below
+  
+  OR via code editor:
+  Online Store > Themes > Edit code > assets/base.css (append to the bottom)
+*/
+
+/* ─── Prevent horizontal overflow on all elements ─── */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* ─── Catch any element that bleeds past the viewport ─── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ─── Common Shopify section/block overflows ─── */
+.shopify-section,
+section,
+header,
+footer,
+main,
+.page-width {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ─── Fix full-width images & videos that can overflow ─── */
+img,
+video,
+iframe,
+embed,
+object {
+  max-width: 100%;
+}
+
+/* ─── Fix elements that use 100vw (includes scrollbar width, causing overflow) ─── */
+.full-width,
+[style*="width: 100vw"],
+[style*="width:100vw"] {
+  width: 100%;
+  max-width: 100vw;
+}
+
+/* ─── Announcement bar (common offender on mobile) ─── */
+.announcement-bar,
+.shopify-section-announcement-bar {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* ─── Scrolling / marquee text blocks ─── */
+.scrolling-text-wrap,
+.ticker-tape,
+.marquee {
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* ─── Header nav that can overflow on small screens ─── */
+.header-wrapper,
+.header {
+  max-width: 100%;
+  overflow-x: hidden;
+}
